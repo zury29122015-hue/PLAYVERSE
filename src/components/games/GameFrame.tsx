@@ -65,7 +65,10 @@ export function GameFrame({
       // allow-modals lets the game use alert/confirm/prompt — without it Chrome
       // silently halts the whole script the first time it calls one of those,
       // which looks exactly like a blank/black player with no visible error.
-      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals"
+      // allow-downloads lets a game save/export something (e.g. progress) as a
+      // file; without it, Chrome's console shows "Download is disallowed" and
+      // whatever code path triggered it can stall the rest of the game's init.
+      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-downloads"
       allow="gamepad; fullscreen; autoplay"
       allowFullScreen
     />

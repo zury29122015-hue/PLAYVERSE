@@ -19,7 +19,7 @@ export default async function ImportReviewPage({ params }: { params: Promise<{ p
           <iframe
             src={project.entryFile}
             title="preview"
-            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals"
+            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-downloads"
             className="w-full aspect-video rounded-xl border border-pv-border bg-black"
           />
         ) : (
