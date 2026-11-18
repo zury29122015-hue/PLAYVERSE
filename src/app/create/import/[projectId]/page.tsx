@@ -19,7 +19,10 @@ export default async function ImportReviewPage({ params }: { params: Promise<{ p
           <iframe
             src={project.entryFile}
             title="preview"
-            sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-downloads"
+            // Same reasoning as GameFrame.tsx: this is a real (non-srcDoc)
+            // navigation to a cross-origin Vercel Blob URL, which already
+            // can't reach this app's cookies/localStorage. sandbox here only
+            // broke playback (Chrome forces a download instead of rendering).
             className="w-full aspect-video rounded-xl border border-pv-border bg-black"
           />
         ) : (

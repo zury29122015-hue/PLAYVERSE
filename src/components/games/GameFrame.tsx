@@ -59,16 +59,12 @@ export function GameFrame({
       src={entryFile}
       title={title}
       className="w-full aspect-video rounded-xl border border-pv-border bg-black"
-      // allow-same-origin is required for Chrome to render a sandboxed same-origin
-      // document at all; the server's own CSP (see next.config.ts) forces this
-      // content into an opaque origin anyway, so cookies/localStorage stay inaccessible.
-      // allow-modals lets the game use alert/confirm/prompt — without it Chrome
-      // silently halts the whole script the first time it calls one of those,
-      // which looks exactly like a blank/black player with no visible error.
-      // allow-downloads lets a game save/export something (e.g. progress) as a
-      // file; without it, Chrome's console shows "Download is disallowed" and
-      // whatever code path triggered it can stall the rest of the game's init.
-      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals allow-downloads"
+      // entryFile is a Vercel Blob URL on a completely different origin from
+      // this app, so it already can't touch our cookies/localStorage — sandbox
+      // adds no real isolation here. It actively broke playback: Chrome treats
+      // a sandboxed real (non-srcDoc) navigation to a cross-origin document as
+      // untrustworthy and, once allow-downloads is set, forces it to download
+      // instead of render. Dropping sandbox entirely fixes that.
       allow="gamepad; fullscreen; autoplay"
       allowFullScreen
     />
