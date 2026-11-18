@@ -208,7 +208,7 @@ export function CodeStudio({
                   ref={previewFrameRef}
                   title="preview"
                   srcDoc={previewHtml}
-                  sandbox="allow-scripts allow-pointer-lock allow-forms"
+                  sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals"
                   className="w-full h-full"
                 />
                 <button

@@ -62,7 +62,10 @@ export function GameFrame({
       // allow-same-origin is required for Chrome to render a sandboxed same-origin
       // document at all; the server's own CSP (see next.config.ts) forces this
       // content into an opaque origin anyway, so cookies/localStorage stay inaccessible.
-      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+      // allow-modals lets the game use alert/confirm/prompt — without it Chrome
+      // silently halts the whole script the first time it calls one of those,
+      // which looks exactly like a blank/black player with no visible error.
+      sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-modals"
       allow="gamepad; fullscreen; autoplay"
       allowFullScreen
     />
