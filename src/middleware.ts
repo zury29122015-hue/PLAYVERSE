@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 
 const AUTH_REQUIRED_PREFIXES = ["/create", "/library", "/settings"];
 const ADMIN_REQUIRED_PREFIXES = ["/admin"];
 
-export default auth((req) => {
+// Deliberately avoids importing "@/lib/auth" (the full NextAuth config, which
+// pulls in Prisma + bcryptjs): that bundle is too large for the Edge Function
+// size limit. getToken() only needs AUTH_SECRET to decode the JWT cookie.
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isAuthed = !!req.auth?.user;
-  const isAdmin = req.auth?.user?.role === "ADMIN";
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  const isAuthed = !!token;
+  const isAdmin = token?.role === "ADMIN";
 
   const needsAuth = AUTH_REQUIRED_PREFIXES.some((p) => pathname.startsWith(p));
   const needsAdmin = ADMIN_REQUIRED_PREFIXES.some((p) => pathname.startsWith(p));
@@ -25,7 +30,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/create/:path*", "/library/:path*", "/settings/:path*", "/admin/:path*"],
