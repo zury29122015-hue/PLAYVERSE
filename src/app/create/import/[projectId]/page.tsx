@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { SubmissionForm } from "@/components/create/SubmissionForm";
+import { GamePreviewFrame } from "@/components/games/GamePreviewFrame";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +17,7 @@ export default async function ImportReviewPage({ params }: { params: Promise<{ p
       <div>
         <h1 className="text-xl font-display font-bold mb-3">Previsualiza tu videojuego</h1>
         {project.entryFile ? (
-          <iframe
-            src={project.entryFile}
-            title="preview"
-            // Same reasoning as GameFrame.tsx: this is a real (non-srcDoc)
-            // navigation to a cross-origin Vercel Blob URL, which already
-            // can't reach this app's cookies/localStorage. sandbox here only
-            // broke playback (Chrome forces a download instead of rendering).
-            className="w-full aspect-video rounded-xl border border-pv-border bg-black"
-          />
+          <GamePreviewFrame entryFile={project.entryFile} />
         ) : (
           <div className="w-full aspect-video rounded-xl bg-pv-panel2 flex items-center justify-center text-pv-muted">
             No se pudo generar una vista previa.

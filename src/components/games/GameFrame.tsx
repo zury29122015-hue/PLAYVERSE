@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Play } from "lucide-react";
+import { loadGameSrcDoc } from "@/lib/game-srcdoc";
 
 export function GameFrame({
   kind,
@@ -17,9 +18,21 @@ export function GameFrame({
   gameId: string;
 }) {
   const [started, setStarted] = useState(false);
+  const [srcDoc, setSrcDoc] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   function registerPlay() {
     fetch(`/api/games/${gameId}/play`, { method: "POST" }).catch(() => {});
+  }
+
+  async function play() {
+    setStarted(true);
+    registerPlay();
+    try {
+      setSrcDoc(await loadGameSrcDoc(entryFile!));
+    } catch {
+      setLoadError(true);
+    }
   }
 
   if (!entryFile) {
@@ -33,10 +46,7 @@ export function GameFrame({
   if (!started) {
     return (
       <button
-        onClick={() => {
-          setStarted(true);
-          registerPlay();
-        }}
+        onClick={play}
         className="relative w-full aspect-video rounded-xl overflow-hidden group border border-pv-border"
       >
         {coverImage ? (
@@ -54,17 +64,31 @@ export function GameFrame({
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="w-full aspect-video rounded-xl bg-pv-panel2 flex items-center justify-center text-pv-muted">
+        No se pudo cargar el videojuego.
+      </div>
+    );
+  }
+
+  if (!srcDoc) {
+    return (
+      <div className="w-full aspect-video rounded-xl bg-black flex items-center justify-center text-pv-muted">
+        Cargando...
+      </div>
+    );
+  }
+
   return (
     <iframe
-      src={entryFile}
+      srcDoc={srcDoc}
       title={title}
       className="w-full aspect-video rounded-xl border border-pv-border bg-black"
-      // entryFile is a Vercel Blob URL on a completely different origin from
-      // this app, so it already can't touch our cookies/localStorage — sandbox
-      // adds no real isolation here. It actively broke playback: Chrome treats
-      // a sandboxed real (non-srcDoc) navigation to a cross-origin document as
-      // untrustworthy and, once allow-downloads is set, forces it to download
-      // instead of render. Dropping sandbox entirely fixes that.
+      // No allow-same-origin: srcDoc without it gets a unique opaque origin,
+      // isolated from this app's cookies/localStorage even though the content
+      // is rendered inline rather than navigated to cross-origin.
+      sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals allow-downloads"
       allow="gamepad; fullscreen; autoplay"
       allowFullScreen
     />
