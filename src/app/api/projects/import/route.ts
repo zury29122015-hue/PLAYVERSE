@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import path from "path";
-import { mkdir, writeFile } from "fs/promises";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { gameDir } from "@/lib/storage";
+import { saveGameFile } from "@/lib/storage";
 import { analyzeZip, extractZipToDir, detectEntryAndEngine, BLOCKED_EXTENSIONS } from "@/lib/zip-analyzer";
 
 const MAX_SIZE = Number(process.env.MAX_UPLOAD_SIZE_BYTES ?? 200 * 1024 * 1024);
@@ -25,7 +24,6 @@ export async function POST(req: Request) {
   const project = await db.project.create({
     data: { ownerId: user.id, kind: "IMPORT", title, data: {} },
   });
-  const { absPath, publicPath } = await gameDir(project.id);
 
   try {
     if (mode === "zip") {
@@ -35,11 +33,13 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const analysis = analyzeZip(buffer, MAX_SIZE);
       if (!analysis.ok) throw new Error(analysis.error);
-      await extractZipToDir(buffer, absPath);
+      const urls = await extractZipToDir(buffer, project.id);
+      const entryFile = analysis.entryFile ? urls[analysis.entryFile] : undefined;
+      if (!entryFile) throw new Error("No se pudo determinar la URL del archivo de inicio.");
 
       await db.project.update({
         where: { id: project.id },
-        data: { entryFile: `${publicPath}/${analysis.entryFile}`, data: { engineHint: analysis.engineHint, fileCount: analysis.fileCount } },
+        data: { entryFile, data: { engineHint: analysis.engineHint, fileCount: analysis.fileCount } },
       });
     } else if (mode === "files") {
       const files = form.getAll("file") as unknown[];
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
 
       let totalSize = 0;
       const writtenPaths: string[] = [];
+      const urls: Record<string, string> = {};
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
         if (!(f instanceof File)) continue;
@@ -58,22 +59,21 @@ export async function POST(req: Request) {
         totalSize += f.size;
         if (totalSize > MAX_SIZE) throw new Error(`El proyecto supera el límite de ${Math.round(MAX_SIZE / 1024 / 1024)}MB.`);
 
-        const dest = path.join(absPath, rel);
-        if (!path.resolve(dest).startsWith(path.resolve(absPath))) throw new Error("Ruta de archivo inválida.");
-        await mkdir(path.dirname(dest), { recursive: true });
-        await writeFile(dest, Buffer.from(await f.arrayBuffer()));
+        const contentType = ext === ".html" || ext === ".htm" ? "text/html; charset=utf-8" : undefined;
+        urls[rel] = await saveGameFile(project.id, rel, Buffer.from(await f.arrayBuffer()), contentType);
         writtenPaths.push(rel);
       }
 
       const detected = detectEntryAndEngine(writtenPaths);
-      if (!detected.entryFile) {
+      const entryFile = detected.entryFile ? urls[detected.entryFile] : undefined;
+      if (!entryFile) {
         throw new Error("No se encontró un archivo HTML de inicio (index.html) entre los archivos subidos.");
       }
 
       await db.project.update({
         where: { id: project.id },
         data: {
-          entryFile: `${publicPath}/${detected.entryFile}`,
+          entryFile,
           data: { engineHint: detected.engineHint, fileCount: writtenPaths.length },
         },
       });

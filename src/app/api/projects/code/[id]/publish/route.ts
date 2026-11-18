@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { gameDir } from "@/lib/storage";
+import { saveGameFile } from "@/lib/storage";
 import { buildPreviewHtml, type CodeProjectData } from "@/lib/code-studio-defaults";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -22,10 +20,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const codeData = project.data as unknown as CodeProjectData;
   const html = buildPreviewHtml(codeData.files, "index.html");
-  const { absPath, publicPath } = await gameDir(project.id);
-  await writeFile(path.join(absPath, "index.html"), html, "utf-8");
+  const entryFile = await saveGameFile(project.id, "index.html", html, "text/html; charset=utf-8");
 
-  const entryFile = `${publicPath}/index.html`;
   await db.project.update({ where: { id }, data: { entryFile } });
 
   return NextResponse.json({ entryFile });

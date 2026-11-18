@@ -1,6 +1,6 @@
 import AdmZip from "adm-zip";
 import path from "path";
-import { mkdir, writeFile } from "fs/promises";
+import { saveGameFile } from "@/lib/storage";
 
 export type EngineHint = "HTML5" | "UNITY_WEBGL" | "GODOT_HTML5" | "UNKNOWN";
 
@@ -115,18 +115,19 @@ export function detectEntryAndEngine(entries: string[]): { entryFile?: string; e
   return { entryFile, engineHint, topLevelFolder };
 }
 
-/** Extracts a validated ZIP buffer to the given absolute directory, preserving relative paths. Call only after analyzeZip() returned ok:true. */
-export async function extractZipToDir(buffer: Buffer, absDir: string): Promise<void> {
+/** Extracts a validated ZIP buffer into game storage (local disk or Blob), preserving relative paths. Call only after analyzeZip() returned ok:true. Returns the public URL of each written file, keyed by its relative path. */
+export async function extractZipToDir(buffer: Buffer, gameOrProjectId: string): Promise<Record<string, string>> {
   const zip = new AdmZip(buffer);
   const entries = zip.getEntries().filter((e) => !e.isDirectory);
+  const urls: Record<string, string> = {};
   for (const entry of entries) {
     const relName = entry.entryName.replace(/\\/g, "/");
-    const destPath = path.join(absDir, relName);
-    const resolved = path.resolve(destPath);
-    if (!resolved.startsWith(path.resolve(absDir))) {
+    if (relName.includes("..")) {
       throw new Error("Blocked path traversal during extraction");
     }
-    await mkdir(path.dirname(resolved), { recursive: true });
-    await writeFile(resolved, entry.getData());
+    const ext = path.extname(relName).toLowerCase();
+    const contentType = ext === ".html" || ext === ".htm" ? "text/html; charset=utf-8" : undefined;
+    urls[relName] = await saveGameFile(gameOrProjectId, relName, entry.getData(), contentType);
   }
+  return urls;
 }
