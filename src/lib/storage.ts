@@ -6,9 +6,14 @@ import { put } from "@vercel/blob";
 const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
 
 // Vercel's filesystem is read-only at runtime (no persistent disk), so uploads
-// there must go to Vercel Blob instead. Locally (no token configured) we keep
+// there must go to Vercel Blob instead. Locally (no store connected) we keep
 // writing to public/uploads so development needs no extra setup.
-const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+//
+// This account's Blob store authenticates via Vercel's OIDC token rather than
+// a static BLOB_READ_WRITE_TOKEN: @vercel/blob's put() auto-detects and
+// refreshes VERCEL_OIDC_TOKEN on its own whenever BLOB_STORE_ID is present and
+// the code is actually running on Vercel, so no extra env var is needed here.
+const useBlob = !!process.env.BLOB_STORE_ID;
 
 function safeSegment(segment: string) {
   return segment.replace(/[^a-zA-Z0-9_.-]/g, "_");
