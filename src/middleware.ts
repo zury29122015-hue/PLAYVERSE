@@ -10,7 +10,15 @@ const ADMIN_REQUIRED_PREFIXES = ["/admin"];
 // size limit. getToken() only needs AUTH_SECRET to decode the JWT cookie.
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  // getToken() infers whether to look for the "__Secure-" prefixed cookie name
+  // from the request's own protocol, which can be misdetected in the Edge
+  // runtime behind Vercel's proxy — forcing it explicitly from
+  // x-forwarded-proto (what the browser actually used) avoids a mismatch
+  // where the cookie NextAuth set is never found, bouncing every authed
+  // request on a protected route straight back to /login.
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  const secureCookie = forwardedProto ? forwardedProto === "https" : req.nextUrl.protocol === "https:";
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET, secureCookie });
   const isAuthed = !!token;
   const isAdmin = token?.role === "ADMIN";
 
