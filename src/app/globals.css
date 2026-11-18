@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #07060d;
+  --foreground: #f5f3ff;
+}
+
+* {
+  scrollbar-color: #8b2fe0 #100e1c;
+  scrollbar-width: thin;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.pv-card {
+  background: linear-gradient(180deg, #161327 0%, #100e1c 100%);
+  border: 1px solid #2a2444;
+}
+
+.pv-gradient-text {
+  background: linear-gradient(90deg, #a855f7, #3b82f6, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pv-btn-primary {
+  background: linear-gradient(90deg, #8b2fe0, #2563ff);
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.pv-btn-primary:hover {
+  filter: brightness(1.15);
+}
+.pv-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.pv-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.pv-scrollbar::-webkit-scrollbar-track {
+  background: #100e1c;
+}
+.pv-scrollbar::-webkit-scrollbar-thumb {
+  background: #8b2fe0;
+  border-radius: 8px;
+}
+
+.pv-input {
+  width: 100%;
+  background: #161327;
+  border: 1px solid #2a2444;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #f5f3ff;
+}
+.pv-input:focus {
+  outline: none;
+  border-color: #8b2fe0;
+}

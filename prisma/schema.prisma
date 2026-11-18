@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ProjectKind {
+  IMPORT
+  CODE
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum GameStatus {
+  PUBLISHED
+  SUSPENDED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  username     String        @unique
+  passwordHash String
+  name         String?
+  avatarUrl    String?
+  bio          String?       @default("")
+  role         Role          @default(USER)
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  projects      Project[]
+  submissions   GameSubmission[] @relation("Submitter")
+  reviewed      GameSubmission[] @relation("Reviewer")
+  games         Game[]
+  ratings       Rating[]
+  comments      Comment[]
+  favorites     Favorite[]
+  notifications Notification[]
+  reportsFiled  Report[]         @relation("Reporter")
+
+  followers Follow[] @relation("Following")
+  following Follow[] @relation("Follower")
+
+  @@index([role])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model Category {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  icon  String @default("gamepad-2")
+  order Int    @default(0)
+
+  games Game[]
+}
+
+model Project {
+  id         String      @id @default(cuid())
+  ownerId    String
+  kind       ProjectKind
+  title      String      @default("Untitled Project")
+  data       Json
+  entryFile  String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  submissions GameSubmission[]
+
+  @@index([ownerId])
+}
+
+model GameSubmission {
+  id           String           @id @default(cuid())
+  projectId    String
+  submitterId  String
+  gameId       String?
+  title        String
+  description  String
+  coverImage   String?
+  screenshots  String[]         @default([])
+  categoryId   String?
+  genre        String?
+  controls     String?
+  ageRating    String           @default("Everyone")
+  tags         String[]         @default([])
+  creatorName  String?
+  snapshot     Json
+  entryFile    String?
+  status       SubmissionStatus @default(PENDING)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submitter User    @relation("Submitter", fields: [submitterId], references: [id], onDelete: Cascade)
+  reviewer  User?   @relation("Reviewer", fields: [reviewedById], references: [id])
+  game      Game?   @relation(fields: [gameId], references: [id])
+
+  @@index([status])
+}
+
+model Game {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  description String
+  coverImage  String?
+  screenshots String[]    @default([])
+  kind        ProjectKind
+  entryFile   String?
+  data        Json?
+  controls    String?
+  ageRating   String      @default("Everyone")
+  tags        String[]    @default([])
+  status      GameStatus  @default(PUBLISHED)
+  playCount   Int         @default(0)
+  ratingAvg   Float       @default(0)
+  ratingCount Int         @default(0)
+  categoryId  String?
+  creatorId   String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  category    Category?        @relation(fields: [categoryId], references: [id])
+  creator     User              @relation(fields: [creatorId], references: [id])
+  ratings     Rating[]
+  comments    Comment[]
+  favorites   Favorite[]
+  reports     Report[]
+  submissions GameSubmission[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  gameId    String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  gameId    String
+  userId    String
+  parentId  String?
+  body      String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  game    Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies Comment[] @relation("Replies")
+
+  @@index([gameId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+}
+
+model Report {
+  id        String       @id @default(cuid())
+  gameId    String?
+  reporterId String
+  reason    String
+  details   String?
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  game     Game? @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  reporter User  @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}

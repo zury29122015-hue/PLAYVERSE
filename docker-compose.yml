@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: playverse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: playverse
+      POSTGRES_PASSWORD: playverse
+      POSTGRES_DB: playverse
+    ports:
+      - "5432:5432"
+    volumes:
+      - playverse-db-data:/var/lib/postgresql/data
+
+volumes:
+  playverse-db-data:
